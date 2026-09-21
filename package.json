@@ -1,10 +1,13 @@
 {
-  "name":"family-gpt-pwa",
-  "private":true,
-  "version":"3.0.0",
-  "type":"module",
-  "dependencies":{
-    "openai":"latest",
-    "busboy":"latest"
+  "name": "family-gpt-pwa",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "dependencies": {
+    "openai": "latest",
+    "busboy": "latest"
   }
 }
