@@ -1,8 +1,0 @@
-{
-  "name": "family-gpt-pwa",
-  "private": true,
-  "version": "3.1.0",
-  "type": "module",
-  "engines": {"node": "24.x"},
-  "dependencies": {"openai": "7.20.0", "busboy": "1.6.0"}
-}
