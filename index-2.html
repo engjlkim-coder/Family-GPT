@@ -1,0 +1,1225 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#314d68">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="가족 GPT">
+<link rel="manifest" href="./manifest.json">
+<title>가족 GPT</title>
+<style>
+:root{--navy:#314d68;--navy2:#45647f;--bg:#eef2f5;--line:#c8d0d7}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:Arial,"Noto Sans KR",sans-serif;background:var(--bg)}
+body{display:flex;flex-direction:column}
+header{background:var(--navy);color:#fff;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;gap:9px}
+header .brand{flex:1;min-width:0}
+h1{font-size:19px;margin:0}
+.sub{font-size:11px;opacity:.8;margin-top:2px}
+.headerbtn{background:transparent;color:#fff;border:1px solid #ffffff55;padding:7px 9px;border-radius:8px;font-size:18px}
+#tools{background:#fff;padding:8px 10px;border-bottom:1px solid var(--line);display:flex;gap:6px;overflow-x:auto;white-space:nowrap}
+button,select{border:1px solid #b8c2cb;border-radius:8px;background:#fff;padding:8px 10px;font-size:13px}
+button.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+#chat{flex:1;overflow:auto;padding:10px 9px 8px}
+.empty{height:100%;display:flex;align-items:center;justify-content:center;color:#78848e;text-align:center;padding:30px}
+.msg{margin:9px 0;line-height:1.6;font-size:15px;word-break:break-word}
+.msg.user{max-width:85%;margin-left:auto;padding:10px 14px;border-radius:18px;background:#e4edf1;border:1px solid #d3dee4}
+.msg.assistant{max-width:100%;padding:2px 1px;background:transparent;border:none}
+.msg img{max-width:100%;max-height:280px;border-radius:9px;margin-top:5px}
+.downloadArea{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.downloadBtn{border:1px solid #b8c2cb;background:#eef2f5;color:#314d68;border-radius:8px;padding:7px 9px;font-size:12px;cursor:pointer}
+.downloadBtn:hover{background:#e3e9ed}
+
+/* MathJax 수식 표시 */
+.msg mjx-container{max-width:100%}
+.msg mjx-container[display="true"]{
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding:6px 0;
+  margin:10px 0 !important;
+}
+.msg mjx-container[display="true"] mjx-math{
+  min-width:max-content;
+}
+.msg mjx-container:not([display="true"]){
+  display:inline-block;
+  max-width:100%;
+  vertical-align:middle;
+}
+
+#files{background:#fff;border-top:1px solid var(--line);padding:7px 10px;display:none}
+.file{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid #eee}
+#attachMenu{position:fixed;left:9px;bottom:66px;background:#fff;border:1px solid #c8d0d7;border-radius:12px;box-shadow:0 8px 24px #0002;padding:6px;display:none;z-index:8;min-width:170px}
+#attachMenu button{display:block;width:100%;text-align:left;border:0;background:#fff;padding:10px 12px}
+#attach{background:#edf2f5;border-top:1px solid var(--line);padding:6px 9px;display:none;gap:6px;overflow-x:auto}
+.thumb{position:relative;flex:none}
+.thumb img{width:55px;height:55px;object-fit:cover;border-radius:8px}
+.thumb button{position:absolute;right:-4px;top:-4px;padding:1px 5px;border-radius:50%;font-size:11px}
+#composer{background:#fff;border-top:1px solid var(--line);padding:8px;display:flex;gap:6px;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+#question{flex:1;border:1px solid #b8c2cb;border-radius:10px;padding:10px;font-size:15px;outline:none;min-width:0}
+.iconbtn{font-size:19px;padding:7px 9px}
+.send{min-width:52px}
+small{color:#68737c}
+pre{background:#272822;color:#f8f8f2;padding:9px;overflow:auto;border-radius:7px}
+#modal,#drawerWrap{position:fixed;inset:0;background:#0007;display:none;z-index:10}
+#panel{background:#fff;width:100%;border-radius:16px 16px 0 0;padding:15px;max-height:80vh;overflow:auto;position:absolute;bottom:0}
+#drawer{background:#fff;width:min(88%,360px);height:100%;padding-top:max(10px,env(safe-area-inset-top));box-shadow:4px 0 18px #0003;overflow:auto}
+.drawerHead{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.drawerHead b{flex:1}
+.newchat{margin:12px;width:calc(100% - 24px)}
+.conv{padding:10px 12px;border-bottom:1px solid #edf0f2;cursor:pointer;display:flex;gap:8px;align-items:center}
+.conv.active{background:#e9eff3}
+.convMain{flex:1;min-width:0}
+.convTitle{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.convDate{font-size:11px;color:#78848e;margin-top:3px}
+.convActions{display:flex;gap:3px}
+.convActions button{padding:4px 6px;font-size:11px}
+.drawerFoot{padding:12px;border-top:1px solid var(--line);font-size:11px;color:#68737c}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
+
+<!-- MathJax 로딩 전에 반드시 설정 -->
+<script>
+window.MathJax={
+  tex:{
+    inlineMath:[
+      ['\\(','\\)'],
+      ['$','$']
+    ],
+    displayMath:[
+      ['\\[','\\]'],
+      ['$$','$$']
+    ],
+    processEscapes:true
+  },
+  options:{
+    skipHtmlTags:[
+      'script',
+      'noscript',
+      'style',
+      'textarea',
+      'pre',
+      'code'
+    ]
+  }
+};
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
+</head>
+
+<body>
+<header>
+  <button class="headerbtn" id="menu">☰</button>
+  <div class="brand">
+    <h1>👨‍👩‍👧 가족 GPT</h1>
+    <div class="sub" id="currentTitle">새 대화</div>
+  </div>
+  <button id="install" style="display:none">📲 설치</button>
+</header>
+
+<div id="tools">
+  <select id="model">
+    <option value="gpt-5.6">GPT-5.6</option>
+    <option value="gpt-5-mini">GPT-5-mini</option>
+    <option value="gpt-4o">GPT-4o</option>
+  </select>
+  <button id="newTop">＋ 새 대화</button>
+  <button id="backup">💾 백업</button>
+  <input id="imgInput" type="file" accept="image/*" capture="environment" multiple hidden>
+  <input id="docInput" type="file" accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv" multiple hidden>
+  <input id="codeInput" type="file" accept=".html,.htm,.css,.js,.json,.xml,.svg,.txt,.md,.csv" multiple hidden>
+</div>
+
+<div id="files"></div>
+<div id="chat"></div>
+<div id="attach"></div>
+
+<div id="attachMenu">
+  <button id="camera">📷 사진 촬영</button>
+  <button id="gallery">🖼️ 사진/이미지 선택</button>
+  <button id="codeFile">💻 HTML/코드 파일 첨부</button>
+  <button id="docs">📄 파일을 지식으로 등록</button>
+  <button id="knowledgeList">📚 등록된 지식자료 보기</button>
+</div>
+
+<div id="composer">
+  <button class="iconbtn" id="clip">📎</button>
+  <input id="question" placeholder="질문을 입력하세요..." autocomplete="off">
+  <button class="primary send" id="send">전송</button>
+</div>
+
+<div id="drawerWrap">
+  <aside id="drawer">
+    <div class="drawerHead">
+      <b>💬 대화 목록</b>
+      <button id="closeDrawer">닫기</button>
+    </div>
+    <button class="primary newchat" id="newDrawer">＋ 새 대화</button>
+    <div id="conversationList"></div>
+    <div class="drawerFoot">
+      대화는 이 휴대폰 브라우저의 저장공간에 저장됩니다.
+      JSON 백업으로 다른 기기에 옮길 수 있습니다.
+    </div>
+  </aside>
+</div>
+
+<div id="modal">
+  <div id="panel">
+    <b>💾 대화 백업</b>
+    <p>
+      <button id="saveJson">JSON 저장</button>
+      <button id="loadJson">JSON 불러오기</button>
+    </p>
+    <p>
+      <small>
+        현재 모든 대화가 백업됩니다.
+        이미지가 포함된 대화는 파일 크기가 커질 수 있습니다.
+      </small>
+    </p>
+    <button id="close">닫기</button>
+    <input id="jsonInput" type="file" accept=".json" hidden>
+  </div>
+</div>
+
+<script>
+const converter=new showdown.Converter({
+  tables:true,
+  strikethrough:true,
+  simplifiedAutoLink:true
+});
+
+const chat=document.querySelector('#chat');
+const q=document.querySelector('#question');
+
+const KEY='familyGPTConversationsV1';
+const OLD='familyGPTHistory';
+
+let conversations=[];
+let currentId=null;
+let images=[];
+let fileAttachments=[];
+let deferredPrompt=null;
+
+function esc(s){
+  return String(s).replace(
+    /[&<>"']/g,
+    c=>({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
+}
+
+/*
+ * Showdown이 MathJax 구분자의 역슬래시를 변경하지 않도록
+ * 마크다운 변환 전에 수식을 임시 토큰으로 보호합니다.
+ */
+function markdownWithMath(text){
+  const formulas=[];
+
+  function saveFormula(formula){
+    const token='MATHPLACEHOLDER'+formulas.length+'XYZ';
+    formulas.push(formula);
+    return token;
+  }
+
+  let source=String(text||'');
+
+  /* \[ ... \] 블록 수식 */
+  source=source.replace(
+    /\\\[[\s\S]*?\\\]/g,
+    match=>saveFormula(match)
+  );
+
+  /* \( ... \) 인라인 수식 */
+  source=source.replace(
+    /\\\([\s\S]*?\\\)/g,
+    match=>saveFormula(match)
+  );
+
+  /* $$ ... $$ 블록 수식 */
+  source=source.replace(
+    /\$\$[\s\S]*?\$\$/g,
+    match=>saveFormula(match)
+  );
+
+  /*
+   * $ ... $ 인라인 수식
+   * \$처럼 이스케이프된 달러 기호는 제외합니다.
+   */
+  source=source.replace(
+    /(^|[^\\$])\$(?!\$)([^\n$]+?)\$/g,
+    (match,prefix,formula)=>{
+      return prefix+saveFormula('$'+formula+'$');
+    }
+  );
+
+  let html=converter.makeHtml(source);
+
+  formulas.forEach((formula,index)=>{
+    const token='MATHPLACEHOLDER'+index+'XYZ';
+    html=html.split(token).join(esc(formula));
+  });
+
+  return html;
+}
+
+function uid(){
+  return 'c_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);
+}
+
+function now(){
+  return Date.now();
+}
+
+function formatDate(ts){
+  const d=new Date(ts);
+
+  return d.toLocaleDateString('ko-KR',{
+    year:'numeric',
+    month:'2-digit',
+    day:'2-digit'
+  })+' '+d.toLocaleTimeString('ko-KR',{
+    hour:'2-digit',
+    minute:'2-digit'
+  });
+}
+
+function loadStore(){
+  try{
+    conversations=JSON.parse(localStorage.getItem(KEY)||'[]');
+  }catch{
+    conversations=[];
+  }
+
+  if(!Array.isArray(conversations)){
+    conversations=[];
+  }
+
+  if(!conversations.length){
+    try{
+      const old=JSON.parse(localStorage.getItem(OLD)||'[]');
+
+      if(Array.isArray(old)&&old.length){
+        const t=old.find(x=>x.role==='user')?.content||'이전 대화';
+
+        const c={
+          id:uid(),
+          title:makeTitle(t),
+          createdAt:now(),
+          updatedAt:now(),
+          model:'gpt-5.6',
+          history:old
+        };
+
+        conversations=[c];
+      }
+    }catch{}
+  }
+
+  if(!conversations.length){
+    createConversation(false);
+  }else{
+    currentId=conversations[0].id;
+  }
+
+  saveStore();
+}
+
+function saveStore(){
+  try{
+    localStorage.setItem(
+      KEY,
+      JSON.stringify(
+        conversations.slice(0,30).map(c=>({
+          ...c,
+          history:(c.history||[]).slice(-80)
+        }))
+      )
+    );
+  }catch(e){
+    alert(
+      '대화 저장공간이 부족합니다. 오래된 대화를 삭제하거나 '+
+      '이미지가 포함된 대화를 백업 후 삭제해 주세요.'
+    );
+  }
+}
+
+function current(){
+  return conversations.find(c=>c.id===currentId)||null;
+}
+
+function makeTitle(text){
+  let s=String(text||'새 대화').replace(/\s+/g,' ').trim();
+
+  if(!s){
+    return '새 대화';
+  }
+
+  return s.length>28?s.slice(0,28)+'…':s;
+}
+
+function renderFiles(){
+  const a=document.querySelector('#attach');
+
+  const all=[
+    ...fileAttachments.map((f,i)=>({
+      type:'file',
+      i,
+      name:f.name
+    })),
+    ...images.map((x,i)=>({
+      type:'image',
+      i,
+      name:'이미지'
+    }))
+  ];
+
+  a.innerHTML='';
+
+  if(!all.length){
+    a.style.display='none';
+    return;
+  }
+
+  a.style.display='flex';
+
+  all.forEach(item=>{
+    const d=document.createElement('div');
+    d.className='thumb';
+
+    if(item.type==='image'){
+      d.innerHTML=`<img src="${images[item.i]}"><button>×</button>`;
+    }else{
+      d.innerHTML=`
+        <div style="
+          background:#fff;
+          border:1px solid #c8d0d7;
+          border-radius:8px;
+          padding:10px;
+          min-width:110px;
+          max-width:180px;
+          font-size:11px;
+          white-space:nowrap;
+          overflow:hidden;
+          text-overflow:ellipsis
+        ">📄 ${esc(item.name)}</div>
+        <button>×</button>
+      `;
+    }
+
+    d.querySelector('button').onclick=()=>{
+      if(item.type==='image'){
+        images.splice(item.i,1);
+      }else{
+        fileAttachments.splice(item.i,1);
+      }
+
+      renderFiles();
+    };
+
+    a.appendChild(d);
+  });
+}
+
+function createConversation(open=true){
+  const c={
+    id:uid(),
+    title:'새 대화',
+    createdAt:now(),
+    updatedAt:now(),
+    model:document.querySelector('#model').value,
+    history:[]
+  };
+
+  conversations.unshift(c);
+  currentId=c.id;
+  images=[];
+  fileAttachments=[];
+
+  renderFiles();
+
+  document.querySelector('#model').value=c.model;
+
+  draw();
+  saveStore();
+  renderConversations();
+  updateTitle();
+
+  if(open){
+    closeDrawer();
+  }
+}
+
+function switchConversation(id){
+  const c=conversations.find(x=>x.id===id);
+
+  if(!c){
+    return;
+  }
+
+  currentId=id;
+  images=[];
+  fileAttachments=[];
+
+  renderFiles();
+
+  document.querySelector('#model').value=c.model||'gpt-5.6';
+
+  draw();
+  renderConversations();
+  updateTitle();
+  closeDrawer();
+}
+
+function deleteConversation(id){
+  const c=conversations.find(x=>x.id===id);
+
+  if(!c){
+    return;
+  }
+
+  if(!confirm('이 대화를 삭제할까요?')){
+    return;
+  }
+
+  conversations=conversations.filter(x=>x.id!==id);
+
+  if(!conversations.length){
+    createConversation(false);
+    return;
+  }
+
+  if(currentId===id){
+    currentId=conversations[0].id;
+  }
+
+  saveStore();
+  switchConversation(currentId);
+}
+
+function renameConversation(id){
+  const c=conversations.find(x=>x.id===id);
+
+  if(!c){
+    return;
+  }
+
+  const n=prompt('대화 제목',c.title||'새 대화');
+
+  if(n===null){
+    return;
+  }
+
+  c.title=n.trim()||'새 대화';
+  c.updatedAt=now();
+
+  saveStore();
+  renderConversations();
+  updateTitle();
+}
+
+function updateTitle(){
+  const c=current();
+  document.querySelector('#currentTitle').textContent=c?.title||'새 대화';
+}
+
+function renderConversations(){
+  const box=document.querySelector('#conversationList');
+  box.innerHTML='';
+
+  if(!conversations.length){
+    box.innerHTML='<div style="padding:20px;color:#78848e">대화가 없습니다.</div>';
+    return;
+  }
+
+  for(const c of conversations){
+    const d=document.createElement('div');
+    d.className='conv'+(c.id===currentId?' active':'');
+
+    d.innerHTML=`
+      <div class="convMain">
+        <div class="convTitle">${esc(c.title||'새 대화')}</div>
+        <div class="convDate">${formatDate(c.updatedAt||c.createdAt)}</div>
+      </div>
+      <div class="convActions">
+        <button data-act="rename">수정</button>
+        <button data-act="delete">삭제</button>
+      </div>
+    `;
+
+    d.querySelector('.convMain').onclick=()=>{
+      switchConversation(c.id);
+    };
+
+    d.querySelector('[data-act="rename"]').onclick=e=>{
+      e.stopPropagation();
+      renameConversation(c.id);
+    };
+
+    d.querySelector('[data-act="delete"]').onclick=e=>{
+      e.stopPropagation();
+      deleteConversation(c.id);
+    };
+
+    box.appendChild(d);
+  }
+}
+
+function draw(){
+  chat.innerHTML='';
+
+  const c=current();
+  const h=c?.history||[];
+
+  if(!h.filter(m=>m.role!=='system').length){
+    chat.innerHTML=`
+      <div class="empty">
+        <div>
+          👨‍👩‍👧 <b>가족 GPT</b><br><br>
+          새로운 대화를 시작해 보세요.
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  h.forEach(m=>{
+    if(m.role==='system'){
+      return;
+    }
+
+    addMsg(m.role,m.content,m.images||[]);
+  });
+
+  chat.scrollTop=chat.scrollHeight;
+}
+
+function getCodeDownloads(text){
+  const out=[];
+  const re=/```([\w+-]*)\s*\n([\s\S]*?)```/g;
+  let m;
+
+  while((m=re.exec(String(text||'')))){
+    out.push({
+      lang:(m[1]||'text').toLowerCase(),
+      code:m[2]
+    });
+  }
+
+  if(!out.length){
+    const raw=String(text||'');
+    const a=raw.indexOf('<!DOCTYPE html>');
+    const b=raw.toLowerCase().lastIndexOf('</html>');
+
+    if(a>=0&&b>a){
+      out.push({
+        lang:'html',
+        code:raw.slice(a,b+7)
+      });
+    }
+  }
+
+  return out;
+}
+
+function downloadCode(code,lang,index){
+  const extMap={
+    html:'html',
+    htm:'html',
+    css:'css',
+    javascript:'js',
+    js:'js',
+    typescript:'ts',
+    ts:'ts',
+    json:'json',
+    xml:'xml',
+    svg:'svg',
+    markdown:'md',
+    md:'md',
+    text:'txt',
+    txt:'txt',
+    csv:'csv'
+  };
+
+  const ext=extMap[lang]||'txt';
+  const c=current();
+
+  let base='수정본';
+
+  const files=(c?.history||[]).flatMap(x=>
+    Array.isArray(x.files)?x.files:[]
+  );
+
+  const source=files.find(f=>
+    /\.(html?|css|js|json|xml|svg|md|txt|csv)$/i.test(
+      String(f.name||'')
+    )
+  );
+
+  if(source?.name){
+    base=String(source.name).replace(/\.[^.]+$/,'')+'_수정본';
+  }
+
+  if(index>0){
+    base+='_'+(index+1);
+  }
+
+  const blob=new Blob(
+    [code],
+    {
+      type:ext==='html'
+        ?'text/html;charset=utf-8'
+        :'text/plain;charset=utf-8'
+    }
+  );
+
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+
+  a.href=url;
+  a.download=base+'.'+ext;
+
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(()=>{
+    URL.revokeObjectURL(url);
+  },1000);
+}
+
+function addMsg(role,text,imgs=[]){
+  const d=document.createElement('div');
+  d.className='msg '+role;
+
+  let html='';
+
+  if(imgs.length){
+    html+=imgs.map(x=>`<img src="${x}">`).join('');
+  }
+
+  html+=role==='assistant'
+    ?markdownWithMath(text)
+    :esc(text).replace(/\n/g,'<br>');
+
+  d.innerHTML=html;
+  chat.appendChild(d);
+
+  if(role==='assistant'){
+    const codes=getCodeDownloads(text);
+
+    if(codes.length){
+      const area=document.createElement('div');
+      area.className='downloadArea';
+
+      codes.forEach((item,i)=>{
+        const b=document.createElement('button');
+
+        b.className='downloadBtn';
+        b.textContent=codes.length===1
+          ?'⬇️ 수정 파일 다운로드'
+          :`⬇️ 코드 ${i+1} 다운로드`;
+
+        b.onclick=()=>{
+          downloadCode(item.code,item.lang,i);
+        };
+
+        area.appendChild(b);
+      });
+
+      d.appendChild(area);
+    }
+
+    /*
+     * MathJax가 완전히 로드된 뒤 현재 메시지만 렌더링합니다.
+     * 오류가 발생하면 개발자 도구 콘솔에서 확인할 수 있습니다.
+     */
+    if(window.MathJax&&MathJax.typesetPromise){
+      MathJax.typesetPromise([d]).catch(error=>{
+        console.error('MathJax 수식 렌더링 오류:',error);
+      });
+    }
+  }
+}
+
+function renderAttach(){
+  renderFiles();
+}
+
+function dataURL(f){
+  return new Promise((ok,no)=>{
+    const r=new FileReader();
+
+    r.onload=()=>{
+      const img=new Image();
+
+      img.onload=()=>{
+        const max=1600;
+        const scale=Math.min(
+          1,
+          max/Math.max(img.width,img.height)
+        );
+
+        const c=document.createElement('canvas');
+
+        c.width=Math.max(
+          1,
+          Math.round(img.width*scale)
+        );
+
+        c.height=Math.max(
+          1,
+          Math.round(img.height*scale)
+        );
+
+        const ctx=c.getContext('2d');
+        ctx.drawImage(img,0,0,c.width,c.height);
+
+        let qq=.82;
+
+        const make=()=>{
+          const d=c.toDataURL('image/jpeg',qq);
+
+          if(d.length>3*1024*1024&&qq>.5){
+            qq-=.1;
+            make();
+          }else{
+            ok(d);
+          }
+        };
+
+        make();
+      };
+
+      img.onerror=no;
+      img.src=r.result;
+    };
+
+    r.onerror=no;
+    r.readAsDataURL(f);
+  });
+}
+
+async function send(){
+  const text=q.value.trim();
+
+  if(!text&&!images.length&&!fileAttachments.length){
+    return;
+  }
+
+  const c=current();
+
+  if(!c){
+    return;
+  }
+
+  const imgs=[...images];
+  const files=[...fileAttachments];
+
+  q.value='';
+  images=[];
+  fileAttachments=[];
+
+  renderFiles();
+
+  const userText=text||'첨부한 자료를 분석해 주세요.';
+
+  c.history.push({
+    role:'user',
+    content:userText,
+    images:imgs,
+    files
+  });
+
+  if(c.title==='새 대화'){
+    c.title=makeTitle(userText);
+  }
+
+  c.updatedAt=now();
+  c.model=document.querySelector('#model').value;
+
+  saveStore();
+  renderConversations();
+  updateTitle();
+  draw();
+
+  const typing={
+    role:'assistant',
+    content:'답변을 준비하고 있습니다…'
+  };
+
+  addMsg('assistant',typing.content);
+
+  try{
+    const r=await fetch('/api/chat',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify({
+        model:c.model,
+        question:userText,
+        history:c.history.slice(-12),
+        images:imgs,
+        files
+      })
+    });
+
+    const data=await r.json();
+
+    if(!r.ok){
+      throw Error(data.error||'서버 오류');
+    }
+
+    chat.lastElementChild.remove();
+
+    c.history.push({
+      role:'assistant',
+      content:data.answer
+    });
+
+    c.updatedAt=now();
+
+    saveStore();
+    renderConversations();
+    addMsg('assistant',data.answer);
+
+    chat.scrollTop=chat.scrollHeight;
+  }catch(e){
+    chat.lastElementChild.remove();
+    addMsg('assistant','⚠️ '+e.message);
+  }
+}
+
+function openDrawer(){
+  renderConversations();
+  document.querySelector('#drawerWrap').style.display='block';
+}
+
+function closeDrawer(){
+  document.querySelector('#drawerWrap').style.display='none';
+}
+
+document.querySelector('#menu').onclick=openDrawer;
+document.querySelector('#closeDrawer').onclick=closeDrawer;
+
+document.querySelector('#drawerWrap').onclick=e=>{
+  if(e.target.id==='drawerWrap'){
+    closeDrawer();
+  }
+};
+
+document.querySelector('#newDrawer').onclick=()=>{
+  createConversation(true);
+};
+
+document.querySelector('#newTop').onclick=()=>{
+  createConversation(true);
+};
+
+document.querySelector('#send').onclick=send;
+
+q.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){
+    e.preventDefault();
+    send();
+  }
+});
+
+document.querySelector('#model').onchange=()=>{
+  const c=current();
+
+  if(c){
+    c.model=document.querySelector('#model').value;
+    c.updatedAt=now();
+    saveStore();
+  }
+};
+
+const attachMenu=document.querySelector('#attachMenu');
+
+function closeAttachMenu(){
+  attachMenu.style.display='none';
+}
+
+document.querySelector('#clip').onclick=e=>{
+  e.stopPropagation();
+
+  attachMenu.style.display=
+    attachMenu.style.display==='block'
+      ?'none'
+      :'block';
+};
+
+document.querySelector('#camera').onclick=()=>{
+  closeAttachMenu();
+
+  document
+    .querySelector('#imgInput')
+    .setAttribute('capture','environment');
+
+  document.querySelector('#imgInput').click();
+};
+
+document.querySelector('#gallery').onclick=()=>{
+  closeAttachMenu();
+
+  document
+    .querySelector('#imgInput')
+    .removeAttribute('capture');
+
+  document.querySelector('#imgInput').click();
+};
+
+document.querySelector('#imgInput').onchange=async e=>{
+  for(const f of e.target.files){
+    if(f.size<=3*1024*1024){
+      images.push(await dataURL(f));
+    }else{
+      alert(f.name+' : 3MB 이하 이미지만 사용할 수 있습니다.');
+    }
+  }
+
+  e.target.value='';
+  renderFiles();
+};
+
+document.querySelector('#codeFile').onclick=()=>{
+  closeAttachMenu();
+  document.querySelector('#codeInput').click();
+};
+
+document.querySelector('#codeInput').onchange=async e=>{
+  for(const f of e.target.files){
+    if(f.size>1024*1024){
+      alert(f.name+' : 1MB 이하 파일만 첨부할 수 있습니다.');
+      continue;
+    }
+
+    try{
+      const content=await f.text();
+
+      fileAttachments.push({
+        name:f.name,
+        content
+      });
+    }catch(err){
+      alert(f.name+' : 파일을 읽을 수 없습니다.');
+    }
+  }
+
+  e.target.value='';
+  renderFiles();
+};
+
+document.querySelector('#docs').onclick=()=>{
+  closeAttachMenu();
+  document.querySelector('#docInput').click();
+};
+
+document.querySelector('#docInput').onchange=async e=>{
+  for(const f of e.target.files){
+    const fd=new FormData();
+    fd.append('file',f);
+
+    try{
+      const r=await fetch('/api/knowledge/upload',{
+        method:'POST',
+        body:fd
+      });
+
+      const x=await r.json();
+
+      if(!r.ok){
+        throw Error(x.error);
+      }
+
+      alert(f.name+' 등록 완료');
+    }catch(err){
+      alert(f.name+' : '+err.message);
+    }
+  }
+
+  e.target.value='';
+  loadFiles();
+};
+
+document.querySelector('#knowledgeList').onclick=()=>{
+  closeAttachMenu();
+  loadFiles();
+
+  document.querySelector('#files').scrollIntoView({
+    behavior:'smooth',
+    block:'nearest'
+  });
+};
+
+document.addEventListener('click',e=>{
+  if(
+    attachMenu.style.display==='block'&&
+    !attachMenu.contains(e.target)&&
+    e.target.id!=='clip'
+  ){
+    closeAttachMenu();
+  }
+});
+
+async function loadFiles(){
+  try{
+    const r=await fetch('/api/knowledge');
+    const x=await r.json();
+    const box=document.querySelector('#files');
+
+    if(!x.files?.length){
+      box.style.display='none';
+      return;
+    }
+
+    box.style.display='block';
+    box.innerHTML='<b>📚 등록된 지식자료</b>';
+
+    x.files.forEach(f=>{
+      const d=document.createElement('div');
+      d.className='file';
+
+      d.innerHTML=`
+        <span>📄 ${esc(f.filename)}</span>
+        <button>삭제</button>
+      `;
+
+      d.querySelector('button').onclick=async()=>{
+        await fetch(
+          '/api/knowledge/'+encodeURIComponent(f.id),
+          {method:'DELETE'}
+        );
+
+        loadFiles();
+      };
+
+      box.appendChild(d);
+    });
+  }catch{}
+}
+
+const modal=document.querySelector('#modal');
+
+document.querySelector('#backup').onclick=()=>{
+  modal.style.display='block';
+};
+
+document.querySelector('#close').onclick=()=>{
+  modal.style.display='none';
+};
+
+document.querySelector('#saveJson').onclick=()=>{
+  const payload={
+    version:'3.4',
+    exportedAt:new Date().toISOString(),
+    conversations
+  };
+
+  const a=document.createElement('a');
+
+  a.href=URL.createObjectURL(
+    new Blob(
+      [JSON.stringify(payload,null,2)],
+      {type:'application/json'}
+    )
+  );
+
+  a.download='family-gpt-conversations.json';
+  a.click();
+
+  setTimeout(()=>{
+    URL.revokeObjectURL(a.href);
+  },1000);
+};
+
+document.querySelector('#loadJson').onclick=()=>{
+  document.querySelector('#jsonInput').click();
+};
+
+document.querySelector('#jsonInput').onchange=e=>{
+  const r=new FileReader();
+
+  r.onload=()=>{
+    try{
+      const data=JSON.parse(r.result);
+      const incoming=Array.isArray(data)
+        ?data
+        :data.conversations;
+
+      if(!Array.isArray(incoming)){
+        throw Error();
+      }
+
+      const cleaned=incoming
+        .filter(c=>c&&c.id&&Array.isArray(c.history))
+        .map(c=>({
+          ...c,
+          id:uid(),
+          title:c.title||'새 대화',
+          createdAt:c.createdAt||now(),
+          updatedAt:c.updatedAt||now(),
+          model:c.model||'gpt-5.6'
+        }));
+
+      conversations=[
+        ...cleaned,
+        ...conversations
+      ].slice(0,30);
+
+      currentId=conversations[0]?.id;
+
+      saveStore();
+      renderConversations();
+      updateTitle();
+      draw();
+
+      modal.style.display='none';
+
+      alert(cleaned.length+'개 대화를 불러왔습니다.');
+    }catch{
+      alert('올바른 가족 GPT 백업 JSON 파일이 아닙니다.');
+    }
+  };
+
+  r.readAsText(e.target.files[0]);
+  e.target.value='';
+};
+
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  deferredPrompt=e;
+  document.querySelector('#install').style.display='block';
+});
+
+document.querySelector('#install').onclick=async()=>{
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt=null;
+  }
+};
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker
+    .register('./service-worker.js')
+    .catch(()=>{});
+}
+
+loadStore();
+renderConversations();
+updateTitle();
+draw();
+loadFiles();
+</script>
+</body>
+</html>
