@@ -1,9 +1,6 @@
 import { client, getVectorStoreId } from "./_vectorStore.js";
 import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
-import PDFDocument from "pdfkit";
-import fs from "fs";
-import path from "path";
 
 /*
  * Family GPT 3.5 Final
@@ -1532,37 +1529,49 @@ export default async function handler(
      * PDF
      * =====================================================
      */
-    else if (
-      fileType === "pdf"
-    ) {
+    
+else if (
+  fileType === "pdf"
+) {
 
-      const pdf = await
-        makeSimplePdf(
-          answer
-        );
+  /*
+   * AI 답변을 PDF용 HTML로 변환
+   */
+  const pdfHtml =
+    buildPdfHtml(
+      answer
+    );
 
 
-      generatedFiles.push({
+  /*
+   * HTML → PDF
+   */
+  const pdf =
+    await htmlToPdf(
+      pdfHtml
+    );
 
-        name:
-          "document.pdf",
 
-        type:
-          "application/pdf",
+  generatedFiles.push({
 
-        dataUrl:
-          toDataUrl(
-            pdf,
-            "application/pdf"
-          ),
+    name:
+      "document.pdf",
 
-        icon:
-          "📕"
+    type:
+      "application/pdf",
 
-      });
+    dataUrl:
+      toDataUrl(
+        pdf,
+        "application/pdf"
+      ),
 
-    }
+    icon:
+      "📕"
 
+  });
+
+}
 
     /*
      * =====================================================
