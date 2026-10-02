@@ -890,7 +890,8 @@ function fileFromAnswer(
    PDF 생성
    ========================================================= */
 
-function makeSimplePdf(text) {
+async function 
+   makeSimplePdf(text) {
   const fontPath = path.join(
     process.cwd(),
     "fonts",
@@ -938,26 +939,6 @@ function makeSimplePdf(text) {
     pageWidth - marginLeft - marginRight;
 
   let y = marginTop;
-
-  function drawPageNumber() {
-    const pageNumber = doc.page.document._pageBuffer
-      ? doc.page.document._pageBuffer.length
-      : "";
-
-    doc
-      .font("NotoSansKR")
-      .fontSize(8)
-      .fillColor("#777777")
-      .text(
-        String(doc._pageBuffer ? "" : ""),
-        marginLeft,
-        pageHeight - 30,
-        {
-          width: usableWidth,
-          align: "center"
-        }
-      );
-  }
 
   function newPage() {
     doc.addPage();
