@@ -887,200 +887,293 @@ function fileFromAnswer(
   };
 }
 
-
 /* =========================================================
-   PDF 생성
+   PDF용 HTML 문서 만들기
    ========================================================= */
 
-async function 
-   makeSimplePdf(text) {
-  const fontPath = path.join(
-    process.cwd(),
-    "fonts",
-    "NotoSansKR-Regular.ttf"
-  );
+function buildPdfHtml(content) {
 
-  if (!fs.existsSync(fontPath)) {
-    throw new Error(
-      `한글 폰트를 찾을 수 없습니다: ${fontPath}`
-    );
-  }
+  const text =
+    String(content || "")
+      .trim();
 
-  const doc = new PDFDocument({
-    size: "A4",
-    margin: 50,
-    autoFirstPage: true
-  });
 
-  doc.registerFont("NotoSansKR", fontPath);
-  doc.font("NotoSansKR");
-
-  const chunks = [];
-
-  doc.on("data", chunk => {
-    chunks.push(chunk);
-  });
-
-  const pdfPromise = new Promise((resolve, reject) => {
-    doc.on("end", () => {
-      resolve(Buffer.concat(chunks));
-    });
-
-    doc.on("error", reject);
-  });
-
-  const pageWidth = doc.page.width;
-  const pageHeight = doc.page.height;
-
-  const marginLeft = 50;
-  const marginRight = 50;
-  const marginTop = 50;
-  const marginBottom = 55;
-
-  const usableWidth =
-    pageWidth - marginLeft - marginRight;
-
-  let y = marginTop;
-
-  function newPage() {
-    doc.addPage();
-
-    y = marginTop;
-
-    doc.font("NotoSansKR");
-  }
-
-  function ensureSpace(height) {
-    if (y + height > pageHeight - marginBottom) {
-      newPage();
-    }
-  }
-
-  // 제목
-  doc
-    .font("NotoSansKR")
-    .fontSize(18)
-    .fillColor("#222222")
-    .text("AI 생성 문서", marginLeft, y, {
-      width: usableWidth,
-      align: "center"
-    });
-
-  y += 35;
-
-  // 구분선
-  doc
-    .moveTo(marginLeft, y)
-    .lineTo(pageWidth - marginRight, y)
-    .strokeColor("#cccccc")
-    .stroke();
-
-  y += 20;
-
-  // 본문
-  const lines = String(text ?? "")
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .split("\n");
-
-  for (const line of lines) {
-    const value = line.trimEnd();
-
-    // 빈 줄
-    if (!value.trim()) {
-      y += 9;
-
-      if (y > pageHeight - marginBottom) {
-        newPage();
-      }
-
-      continue;
-    }
-
-    // 제목처럼 보이는 Markdown 헤딩
-    const headingMatch = value.match(/^#{1,6}\s+(.+)$/);
-
-    if (headingMatch) {
-      const heading = headingMatch[1];
-
-      ensureSpace(32);
-
-      y += 6;
-
-      doc
-        .font("NotoSansKR")
-        .fontSize(14)
-        .fillColor("#222222")
-        .text(
-          heading,
-          marginLeft,
-          y,
-          {
-            width: usableWidth,
-            lineGap: 4
-          }
-        );
-
-      y += doc.heightOfString(heading, {
-        width: usableWidth,
-        lineGap: 4
-      }) + 8;
-
-      continue;
-    }
-
-    // 일반 본문
-    doc
-      .font("NotoSansKR")
-      .fontSize(10.5)
-      .fillColor("#222222");
-
-    const height = doc.heightOfString(value, {
-      width: usableWidth,
-      lineGap: 4
-    });
-
-    ensureSpace(height + 5);
-
-    doc.text(value, marginLeft, y, {
-      width: usableWidth,
-      lineGap: 4,
-      align: "left"
-    });
-
-    y += height + 5;
-  }
-
-  // 페이지 하단
-  const range = doc.bufferedPageRange();
-
-  for (
-    let i = range.start;
-    i < range.start + range.count;
-    i++
+  /*
+   * 이미 완전한 HTML 문서라면
+   * 그대로 사용
+   */
+  if (
+    /<!doctype\s+html/i.test(text) &&
+    /<html[\s>]/i.test(text)
   ) {
-    doc.switchToPage(i);
 
-    doc
-      .font("NotoSansKR")
-      .fontSize(8)
-      .fillColor("#777777")
-      .text(
-        `${i - range.start + 1} / ${range.count}`,
-        marginLeft,
-        pageHeight - 32,
-        {
-          width: usableWidth,
-          align: "center"
-        }
-      );
+    return text;
+
   }
 
-  doc.end();
 
-  return pdfPromise;
+  /*
+   * HTML 코드블록인 경우
+   * 코드펜스 제거
+   */
+  const cleaned =
+    text
+      .replace(/^```html\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+
+  /*
+   * 완전한 HTML이라면 그대로 사용
+   */
+  if (
+    /<!doctype\s+html/i.test(cleaned) ||
+    /<html[\s>]/i.test(cleaned)
+  ) {
+
+    return cleaned;
+
+  }
+
+
+  /*
+   * 일반 AI 답변이라면
+   * 간단한 HTML 문서로 감싼다.
+   */
+  const escaped =
+    cleaned
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+
+  return `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+
+<meta charset="UTF-8">
+
+<style>
+
+@page {
+  size: A4;
+  margin: 15mm;
 }
 
+* {
+  box-sizing: border-box;
+}
+
+body {
+
+  font-family:
+    "Noto Sans KR",
+    "Malgun Gothic",
+    Arial,
+    sans-serif;
+
+  font-size:
+    11pt;
+
+  line-height:
+    1.7;
+
+  color:
+    #222;
+
+  word-break:
+    keep-all;
+
+}
+
+h1 {
+
+  font-size:
+    22pt;
+
+  margin:
+    0 0 18px 0;
+
+}
+
+h2 {
+
+  font-size:
+    17pt;
+
+  margin:
+    20px 0 10px 0;
+
+}
+
+h3 {
+
+  font-size:
+    14pt;
+
+  margin:
+    16px 0 8px 0;
+
+}
+
+p {
+
+  margin:
+    0 0 9px 0;
+
+}
+
+pre {
+
+  white-space:
+    pre-wrap;
+
+}
+
+table {
+
+  width:
+    100%;
+
+  border-collapse:
+    collapse;
+
+  margin:
+    12px 0;
+
+}
+
+th,
+td {
+
+  border:
+    1px solid #999;
+
+  padding:
+    6px 8px;
+
+}
+
+th {
+
+  background:
+    #eeeeee;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+${escaped
+  .replace(/\n/g, "<br>")}
+
+</body>
+
+</html>
+`;
+
+}
+
+
+/* =========================================================
+   HTML → PDF
+   ========================================================= */
+
+async function htmlToPdf(html) {
+
+  const browser = await puppeteer.launch({
+
+    args:
+      chromium.args,
+
+    defaultViewport:
+      chromium.defaultViewport,
+
+    executablePath:
+      await chromium.executablePath(),
+
+    headless:
+      true
+
+  });
+
+
+  try {
+
+    const page =
+      await browser.newPage();
+
+
+    /*
+     * HTML을 브라우저에 로드
+     */
+    await page.setContent(
+      String(html || ""),
+      {
+        waitUntil:
+          "networkidle0"
+      }
+    );
+
+
+    /*
+     * 인쇄용 CSS 적용
+     */
+    await page.emulateMediaType(
+      "print"
+    );
+
+
+    /*
+     * HTML → PDF
+     */
+    const pdf =
+      await page.pdf({
+
+        format:
+          "A4",
+
+        printBackground:
+          true,
+
+        preferCSSPageSize:
+          true,
+
+        margin: {
+
+          top:
+            "15mm",
+
+          right:
+            "15mm",
+
+          bottom:
+            "15mm",
+
+          left:
+            "15mm"
+
+        }
+
+      });
+
+
+    return pdf;
+
+  }
+
+  finally {
+
+    await browser.close();
+
+  }
+
+}
 
 /* =========================================================
    Data URL
