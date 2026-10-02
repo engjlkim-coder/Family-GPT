@@ -1,4 +1,7 @@
 import { client, getVectorStoreId } from "./_vectorStore.js";
+import PDFDocument from "pdfkit";
+import fs from "fs";
+import path from "path";
 
 /*
  * Family GPT 3.5 Final
@@ -887,272 +890,212 @@ function fileFromAnswer(
    PDF 생성
    ========================================================= */
 
-function makeSimplePdf(
-  text
-) {
-
-  const lines =
-    String(text || "")
-      .replace(
-        /\r/g,
-        ""
-      )
-      .split("\n")
-      .slice(0, 250)
-      .map(
-        line =>
-          line
-            .replace(
-              /[^\x20-\x7E]/g,
-              "?"
-            )
-            .slice(0, 95)
-      );
-
-
-  const perPage =
-    50;
-
-  const pages = [];
-
-
-  for (
-    let i = 0;
-    i < lines.length;
-    i += perPage
-  ) {
-
-    pages.push(
-      lines.slice(
-        i,
-        i + perPage
-      )
-    );
-
-  }
-
-
-  if (!pages.length) {
-
-    pages.push([
-      ""
-    ]);
-
-  }
-
-
-  const escapePdf =
-    s =>
-      s
-        .replace(
-          /\\/g,
-          "\\\\"
-        )
-        .replace(
-          /\(/g,
-          "\\("
-        )
-        .replace(
-          /\)/g,
-          "\\)"
-        );
-
-
-  const objects = [];
-
-
-  const addObject =
-    body => {
-
-      objects.push(
-        body
-      );
-
-      return objects.length;
-
-    };
-
-
-  const catalog =
-    addObject("");
-
-
-  const pagesObject =
-    addObject("");
-
-
-  const font =
-    addObject(
-      "<< /Type /Font " +
-      "/Subtype /Type1 " +
-      "/BaseFont /Helvetica >>"
-    );
-
-
-  const pageRefs = [];
-
-
-  for (
-    const pageLines of pages
-  ) {
-
-    let stream =
-      "BT\n" +
-      "/F1 10 Tf\n";
-
-    let y =
-      750;
-
-
-    for (
-      const line of pageLines
-    ) {
-
-      stream +=
-        `1 0 0 1 45 ${y} Tm ` +
-        `(${escapePdf(line)}) Tj\n`;
-
-      y -= 14;
-
-    }
-
-
-    stream +=
-      "ET";
-
-
-    const streamObject =
-      addObject(
-        `<< /Length ` +
-        `${Buffer.byteLength(
-          stream,
-          "latin1"
-        )} >>\n` +
-        `stream\n` +
-        `${stream}\n` +
-        `endstream`
-      );
-
-
-    const pageObject =
-      addObject(
-        `<< /Type /Page ` +
-        `/Parent ${pagesObject} 0 R ` +
-        `/MediaBox [0 0 612 792] ` +
-        `/Resources << /Font << /F1 ` +
-        `${font} 0 R >> >> ` +
-        `/Contents ${streamObject} 0 R >>`
-      );
-
-
-    pageRefs.push(
-      pageObject
-    );
-
-  }
-
-
-  objects[
-    catalog - 1
-  ] =
-    `<< /Type /Catalog ` +
-    `/Pages ${pagesObject} 0 R >>`;
-
-
-  objects[
-    pagesObject - 1
-  ] =
-    `<< /Type /Pages ` +
-    `/Kids [` +
-    pageRefs
-      .map(
-        x =>
-          `${x} 0 R`
-      )
-      .join(" ") +
-    `] ` +
-    `/Count ${pageRefs.length} >>`;
-
-
-  let pdf =
-    "%PDF-1.4\n";
-
-
-  const offsets =
-    [0];
-
-
-  objects.forEach(
-    (obj, i) => {
-
-      offsets[
-        i + 1
-      ] =
-        Buffer.byteLength(
-          pdf,
-          "latin1"
-        );
-
-
-      pdf +=
-        `${i + 1} 0 obj\n` +
-        `${obj}\n` +
-        `endobj\n`;
-
-    }
+function makeSimplePdf(text) {
+  const fontPath = path.join(
+    process.cwd(),
+    "fonts",
+    "NotoSansKR-Regular.ttf"
   );
 
-
-  const xref =
-    Buffer.byteLength(
-      pdf,
-      "latin1"
+  if (!fs.existsSync(fontPath)) {
+    throw new Error(
+      `한글 폰트를 찾을 수 없습니다: ${fontPath}`
     );
+  }
 
+  const doc = new PDFDocument({
+    size: "A4",
+    margin: 50,
+    autoFirstPage: true
+  });
 
-  pdf +=
-    `xref\n` +
-    `0 ${objects.length + 1}\n`;
+  doc.registerFont("NotoSansKR", fontPath);
+  doc.font("NotoSansKR");
 
+  const chunks = [];
 
-  pdf +=
-    "0000000000 65535 f \n";
+  doc.on("data", chunk => {
+    chunks.push(chunk);
+  });
 
+  const pdfPromise = new Promise((resolve, reject) => {
+    doc.on("end", () => {
+      resolve(Buffer.concat(chunks));
+    });
+
+    doc.on("error", reject);
+  });
+
+  const pageWidth = doc.page.width;
+  const pageHeight = doc.page.height;
+
+  const marginLeft = 50;
+  const marginRight = 50;
+  const marginTop = 50;
+  const marginBottom = 55;
+
+  const usableWidth =
+    pageWidth - marginLeft - marginRight;
+
+  let y = marginTop;
+
+  function drawPageNumber() {
+    const pageNumber = doc.page.document._pageBuffer
+      ? doc.page.document._pageBuffer.length
+      : "";
+
+    doc
+      .font("NotoSansKR")
+      .fontSize(8)
+      .fillColor("#777777")
+      .text(
+        String(doc._pageBuffer ? "" : ""),
+        marginLeft,
+        pageHeight - 30,
+        {
+          width: usableWidth,
+          align: "center"
+        }
+      );
+  }
+
+  function newPage() {
+    doc.addPage();
+
+    y = marginTop;
+
+    doc.font("NotoSansKR");
+  }
+
+  function ensureSpace(height) {
+    if (y + height > pageHeight - marginBottom) {
+      newPage();
+    }
+  }
+
+  // 제목
+  doc
+    .font("NotoSansKR")
+    .fontSize(18)
+    .fillColor("#222222")
+    .text("AI 생성 문서", marginLeft, y, {
+      width: usableWidth,
+      align: "center"
+    });
+
+  y += 35;
+
+  // 구분선
+  doc
+    .moveTo(marginLeft, y)
+    .lineTo(pageWidth - marginRight, y)
+    .strokeColor("#cccccc")
+    .stroke();
+
+  y += 20;
+
+  // 본문
+  const lines = String(text ?? "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n");
+
+  for (const line of lines) {
+    const value = line.trimEnd();
+
+    // 빈 줄
+    if (!value.trim()) {
+      y += 9;
+
+      if (y > pageHeight - marginBottom) {
+        newPage();
+      }
+
+      continue;
+    }
+
+    // 제목처럼 보이는 Markdown 헤딩
+    const headingMatch = value.match(/^#{1,6}\s+(.+)$/);
+
+    if (headingMatch) {
+      const heading = headingMatch[1];
+
+      ensureSpace(32);
+
+      y += 6;
+
+      doc
+        .font("NotoSansKR")
+        .fontSize(14)
+        .fillColor("#222222")
+        .text(
+          heading,
+          marginLeft,
+          y,
+          {
+            width: usableWidth,
+            lineGap: 4
+          }
+        );
+
+      y += doc.heightOfString(heading, {
+        width: usableWidth,
+        lineGap: 4
+      }) + 8;
+
+      continue;
+    }
+
+    // 일반 본문
+    doc
+      .font("NotoSansKR")
+      .fontSize(10.5)
+      .fillColor("#222222");
+
+    const height = doc.heightOfString(value, {
+      width: usableWidth,
+      lineGap: 4
+    });
+
+    ensureSpace(height + 5);
+
+    doc.text(value, marginLeft, y, {
+      width: usableWidth,
+      lineGap: 4,
+      align: "left"
+    });
+
+    y += height + 5;
+  }
+
+  // 페이지 하단
+  const range = doc.bufferedPageRange();
 
   for (
-    let i = 1;
-    i <= objects.length;
+    let i = range.start;
+    i < range.start + range.count;
     i++
   ) {
+    doc.switchToPage(i);
 
-    pdf +=
-      `${String(
-        offsets[i]
-      ).padStart(
-        10,
-        "0"
-      )} 00000 n \n`;
-
+    doc
+      .font("NotoSansKR")
+      .fontSize(8)
+      .fillColor("#777777")
+      .text(
+        `${i - range.start + 1} / ${range.count}`,
+        marginLeft,
+        pageHeight - 32,
+        {
+          width: usableWidth,
+          align: "center"
+        }
+      );
   }
 
+  doc.end();
 
-  pdf +=
-    `trailer\n` +
-    `<< /Size ` +
-    `${objects.length + 1} ` +
-    `/Root ${catalog} 0 R >>\n`;
-
-
-  pdf +=
-    `startxref\n` +
-    `${xref}\n` +
-    `%%EOF`;
-
-
-  return Buffer.from(
-    pdf,
-    "latin1"
-  );
+  return pdfPromise;
 }
 
 
@@ -1517,7 +1460,7 @@ export default async function handler(
       fileType === "pdf"
     ) {
 
-      const pdf =
+      const pdf = await
         makeSimplePdf(
           answer
         );
