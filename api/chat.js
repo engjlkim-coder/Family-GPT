@@ -1,4 +1,6 @@
 import { client, getVectorStoreId } from "./_vectorStore.js";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
