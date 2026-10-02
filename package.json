@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "openai": "7.20.0",
-    "busboy": "1.6.0"
+    "busboy": "1.6.0",
+    "pdfkit": "^0.17.2"
   }
 }
