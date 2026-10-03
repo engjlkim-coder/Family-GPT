@@ -1672,38 +1672,112 @@ if(
 
 
         /*
-         * data URL 또는 URL을 Blob으로 변환
-         */
-        let blob;
+ * data URL을 직접 Base64 → Blob으로 변환
+ */
+let blob;
 
 
-        if(
-          source.startsWith('data:')
-        ){
+if(
+  source.startsWith('data:')
+){
 
-          const response =
-            await fetch(source);
+  const comma =
+    source.indexOf(',');
 
-          blob =
-            await response.blob();
 
-        }else{
+  if(comma === -1){
 
-          const response =
-            await fetch(source);
+    throw new Error(
+      '잘못된 Data URL입니다.'
+    );
 
-          if(!response.ok){
+  }
 
-            throw new Error(
-              `파일을 가져오지 못했습니다. (${response.status})`
-            );
 
-          }
+  const header =
+    source.substring(
+      0,
+      comma
+    );
 
-          blob =
-            await response.blob();
 
-        }
+  const base64 =
+    source.substring(
+      comma + 1
+    );
+
+
+  const mimeMatch =
+    header.match(
+      /^data:([^;]+);base64/i
+    );
+
+
+  const mime =
+    mimeMatch
+      ? mimeMatch[1]
+      : (
+          file.type ||
+          'application/octet-stream'
+        );
+
+
+  /*
+   * Base64 → binary
+   */
+  const binary =
+    atob(base64);
+
+
+  const bytes =
+    new Uint8Array(
+      binary.length
+    );
+
+
+  for(
+    let i=0;
+    i<binary.length;
+    i++
+  ){
+
+    bytes[i] =
+      binary.charCodeAt(i);
+
+  }
+
+
+  blob =
+    new Blob(
+      [bytes],
+      {
+        type:mime
+      }
+    );
+
+
+}else{
+
+  /*
+   * 일반 URL 파일은 기존 방식 사용
+   */
+  const response =
+    await fetch(source);
+
+
+  if(!response.ok){
+
+    throw new Error(
+      `파일을 가져오지 못했습니다. (${response.status})`
+    );
+
+  }
+
+
+  blob =
+    await response.blob();
+
+}
 
 
         /*
