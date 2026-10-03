@@ -1242,7 +1242,39 @@ function draw(){
 
 }
 
+/*
+ * 이미지를 긴 변 1600px 이하 JPEG로 줄여서 data URL로 반환
+ */
+async function resizeImage(file,maxSide=1600,quality=0.85){
 
+  const bitmap=await createImageBitmap(file);
+
+  const scale=Math.min(
+    1,
+    maxSide/Math.max(bitmap.width,bitmap.height)
+  );
+
+  const w=Math.round(bitmap.width*scale);
+  const h=Math.round(bitmap.height*scale);
+
+  const canvas=document.createElement('canvas');
+  canvas.width=w;
+  canvas.height=h;
+
+  const ctx=canvas.getContext('2d');
+
+  /* PNG 투명 배경이 검게 되지 않도록 흰 배경 */
+  ctx.fillStyle='#fff';
+  ctx.fillRect(0,0,w,h);
+
+  ctx.drawImage(bitmap,0,0,w,h);
+
+  bitmap.close&&bitmap.close();
+
+  return canvas.toDataURL('image/jpeg',quality);
+
+}
+  
 async function dataURL(file){
 
   return new Promise(
@@ -2444,29 +2476,36 @@ document.querySelector(
 ).onchange=
   async e=>{
 
-    for(
-      const f of e.target.files
-    ){
+    for(const f of e.target.files){
 
-      if(
-        f.size<=3*1024*1024
-      ){
+      try{
 
-        images.push(
-          await dataURL(f)
-        );
+        /* 20MB 넘는 원본은 읽기 부담이 커서 제외 */
+        if(f.size>20*1024*1024){
+          alert(f.name+' : 20MB 이하 이미지만 사용할 수 있습니다.');
+          continue;
+        }
 
-      }else{
+        let src;
 
-        alert(
-          f.name+
-          ' : 3MB 이하 이미지만 사용할 수 있습니다.'
-        );
+        /* 작은 사진(500KB 이하)은 원본 유지, 큰 사진은 축소 */
+        if(f.size<=500*1024&&f.type==='image/jpeg'){
+          src=await dataURL(f);
+        }else{
+          src=await resizeImage(f);
+        }
+
+        images.push(src);
+
+      }catch(err){
+
+        console.error('이미지 처리 오류:',err);
+
+        alert(f.name+' : 이미지를 처리할 수 없습니다.');
 
       }
 
     }
-
 
     e.target.value='';
 
