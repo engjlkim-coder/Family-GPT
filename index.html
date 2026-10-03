@@ -266,8 +266,17 @@ button.primary{
   border-radius:10px;
   padding:10px;
   font-size:15px;
+  font-family:inherit;
+  line-height:1.4;
   outline:none;
-  min-width:0
+  min-width:0;
+  resize:none;
+  max-height:160px;
+  overflow-y:auto
+}
+
+#composer{
+  align-items:flex-end
 }
 
 .iconbtn{
@@ -503,11 +512,12 @@ window.MathJax={
     📎
   </button>
 
-  <input
+  <textarea
     id="question"
+    rows="1"
     placeholder="질문을 입력하세요..."
     autocomplete="off"
-  >
+  ></textarea>
 
   <button class="primary send" id="send">
     전송
@@ -1871,6 +1881,7 @@ async function send(){
 
 
   q.value='';
+  q.style.height='auto';
 
   images=[];
 
@@ -2144,7 +2155,13 @@ document.querySelector(
 ).onclick=
   send;
 
+function autoResize(){
+  q.style.height='auto';
+  q.style.height=Math.min(q.scrollHeight,160)+'px';
+}
 
+q.addEventListener('input',autoResize);
+  
 q.addEventListener(
   'keydown',
   e=>{
