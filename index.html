@@ -1953,7 +1953,7 @@ async function send(){
               question:userText,
 
               history:
-                c.history.slice(-12),
+                c.history.slice(-12).map(m => ({ role: m.role, content: m.content })),
 
               images:imgs,
 
