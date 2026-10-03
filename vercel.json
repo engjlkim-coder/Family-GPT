@@ -1,1 +1,10 @@
-{"$schema":"https://openapi.vercel.sh/vercel.json"}
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/chat.js": {
+      "maxDuration": 60,
+      "memory": 1769,
+      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
+    }
+  }
+}
