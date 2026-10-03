@@ -575,7 +575,8 @@ window.MathJax={
 const converter=new showdown.Converter({
   tables:true,
   strikethrough:true,
-  simplifiedAutoLink:true
+  simplifiedAutoLink:true,
+  ghCodeBlocks:true
 });
 
 const chat=document.querySelector('#chat');
@@ -671,6 +672,18 @@ function markdownWithMath(text){
     }
   );
 
+
+  /* 코드블록은 보호하고, 나머지 원본 HTML 태그는 글자로 표시 */
+  const blocks=[];
+  source=source.replace(/```[\s\S]*?```/g,m=>{
+    blocks.push(m);
+    return 'CODEBLOCKPLACEHOLDER'+(blocks.length-1)+'XYZ';
+  });
+
+  source=source.replace(/</g,'&lt;');
+
+  source=source.replace(/CODEBLOCKPLACEHOLDER(\d+)XYZ/g,
+    (m,i)=>blocks[Number(i)]);
 
   let html=
     converter.makeHtml(source);
