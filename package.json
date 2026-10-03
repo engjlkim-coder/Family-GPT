@@ -1,7 +1,7 @@
 {
   "name": "family-gpt-pwa",
   "private": true,
-  "version": "3.3.0",
+  "version": "3.6.0",
   "type": "module",
   "engines": {
     "node": "24.x"
@@ -10,7 +10,7 @@
     "openai": "7.20.0",
     "busboy": "1.6.0",
     "pdfkit": "^0.17.2",
-    "puppeteer-core": "^25.11.0",
+    "puppeteer-core": "^25.12.0",
 "@sparticuz/chromium": "^153.0.0"
   }
 }
